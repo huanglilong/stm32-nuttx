@@ -1,0 +1,6 @@
+[submodule "nuttx/nuttx"]
+	path = nuttx/nuttx
+	url = https://github.com/hll4fork/nuttx-nuttx
+[submodule "nuttx/apps"]
+	path = nuttx/apps
+	url = https://github.com/hll4fork/nuttx-apps
