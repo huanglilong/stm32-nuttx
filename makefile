@@ -75,4 +75,12 @@ firmware.bin:		firmware.elf
 firmware.elf:		$(OBJS) $(LINK_DEPS)
 	$(call LINK,$@,$(OBJS))
 
+clean:
+	$(MAKE) -C $(NUTTX_SRC) distclean
+	rm -rf build
+	rm -f *.elf
+	rm -f *.bin
+	rm -f *.d
+	rm -f *.o
+	rm -f *.map
 -include $(DEPS)
