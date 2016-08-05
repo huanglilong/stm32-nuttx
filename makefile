@@ -10,7 +10,7 @@
 PATH_BASE := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # board
-BOARD := stm32f429i-disco
+BOARD := stm32f429discovery
 
 # nuttx path
 NUTTX_SRC := $(PATH_BASE)/nuttx/nuttx
@@ -32,11 +32,13 @@ $(NUTTX_BIN) : $(NUTTX_SRC)
 	@echo %
 	@echo % First configure Nuttx for $(BOARD)
 	@echo %
-	cd $(NUTTX_SRC)/tools && ./configure.sh $(BOARD)/nsh
+	cd $(NUTTX_SRC)/configs && cp -rf $(PATH_BASE)/nuttx-configs/$(BOARD) .
+	cd $(NUTTX_SRC)/tools && ./configure.sh $(BOARD)/nsh_romfs
 	@echo %
 	@echo % Second build Nuttx for $(BOARD)
 	@echo %
 	$(MAKE) -r -j$(J) -C $(NUTTX_SRC)
+	cd $(NUTTX_SRC)/configs && rm -rf $(BOARD)
 
 clean:
 	rm -rf build/*
