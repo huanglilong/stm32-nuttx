@@ -17,14 +17,17 @@ BOARD := stm32f429discovery
 # nuttx path
 NUTTX_SRC := $(PATH_BASE)/nuttx/nuttx
 
+# nuttx board export 
+NUTTX_EXPORT = $(BOARD).zip
+
+# user source directory
+USER_SRC_DIR := $(PATH_BASE)/src
+
 # nuttx export directory path
 BUILD_DIR := $(PATH_BASE)/build
 
 # build src files 
-BUILD_SRC_DIR := $(PATH_BASE)/build/src
-
-# nuttx board export 
-NUTTX_EXPORT = $(BOARD).zip
+BUILD_SRC_DIR := $(BUILD_DIR)/src
 
 # firmware file
 FIRMWARE_BIN := $(BUILD_DIR)/firmware.bin
@@ -58,9 +61,12 @@ $(NUTTX_EXPORT) : $(NUTTX_SRC)
 firmware:$(FIRMWARE_ELF) $(FIRMWARE_BIN)
 
 # build user's src
-SRCS			 = main.c
-OBJS			 = $(foreach src, $(SRCS), $(BUILD_SRC_DIR)/$(addsuffix .o,$(SRCS)))
-OBJS			 = $(foreach src, $(SRCS), $(BUILD_SRC_DIR)/$(addsuffix .d,$(SRCS)))
+SRCS			 = $(USER_SRC_DIR)/buttons/*.c
+OBJS			 = $(foreach src, $(SRCS), $(BUILD_SRC_DIR)/$(notdir $(addsuffix .o,$(SRCS))))
+DEPS			 = $(foreach src, $(SRCS), $(BUILD_SRC_DIR)/$(notdir $(addsuffix .d,$(SRCS))))
+
+# user header file search path 
+INCLUDE_DIRS += $(USER_SRC_DIR)
 
 $(OBJS):$(SRCS)
 	mkdir -p $(BUILD_SRC_DIR)
@@ -69,8 +75,7 @@ $(OBJS):$(SRCS)
 $(FIRMWARE_BIN):$(FIRMWARE_ELF)
 	$(call SYM_TO_BIN,$<,$@)
 
-$(FIRMWARE_ELF):$(OBJS) $(LINK_DEPS)
-	$(info NUTTX_CONFIG_HEADER = $(NUTTX_CONFIG_HEADER))
+$(FIRMWARE_ELF):$(OBJS)
 	$(call LINK,$@,$(OBJS))
 
 distclean:
@@ -80,7 +85,7 @@ distclean:
 clean:
 	rm -rf $(BUILD_SRC_DIR)
 
-upload:$(FIRMWARE_BIN)
+upload:
 	st-flash write $(FIRMWARE_BIN) 0x8000000
 
 -include $(DEPS)
