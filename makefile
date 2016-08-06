@@ -24,7 +24,8 @@ BUILD_DIR := $(PATH_BASE)/build
 NUTTX_EXPORT = $(BOARD).zip
 
 # firmware file
-FIRMWARE_BIN := $(PATH_BASE)/firmware.bin
+FIRMWARE_BIN := $(BUILD_DIR)/firmware.bin
+FIRMWARE_ELF := $(BUILD_DIR)/firmware.elf
 
 # jobs
 J ?= 4
@@ -51,29 +52,24 @@ include $(PATH_BASE)/makefiles/toolchain-arm.mk
 include $(PATH_BASE)/makefiles/nuttx.mk
 
 # unzip Nuttx's export
-firmware:$(NUTTX_CONFIG_HEADER) firmware.elf firmware.bin
+firmware:$(NUTTX_CONFIG_HEADER) $(FIRMWARE_ELF) $(FIRMWARE_BIN)
 
 # build user's src
 SRCS			 = main.c
-OBJS			 = $(addsuffix .o,$(SRCS))
-DEPS			 = $(addsuffix .d,$(SRCS))
+OBJS			 = $(foreach src, $(SRCS), $(BUILD_DIR)/$(addsuffix .o,$(SRCS)))
+OBJS			 = $(foreach src, $(SRCS), $(BUILD_DIR)/$(addsuffix .d,$(SRCS)))
 
 $(OBJS):$(SRCS)
 	$(call COMPILE,$<,$@)
 
-firmware.bin:		firmware.elf
+$(FIRMWARE_BIN):$(FIRMWARE_ELF)
 	$(call SYM_TO_BIN,$<,$@)
 
-firmware.elf:		$(OBJS) $(LINK_DEPS)
+$(FIRMWARE_ELF):$(OBJS) $(LINK_DEPS)
 	$(call LINK,$@,$(OBJS))
 
 clean:
-	@rm -rf build/*
-	@rm -f *.elf
-	@rm -f *.bin
-	@rm -f *.d
-	@rm -f *.o
-	@rm -f *.map
+	rm -rf build/*
 	$(MAKE) -r -j$(J) -C $(NUTTX_SRC) distclean
 
 upload:$(FIRMWARE_BIN)
