@@ -85,8 +85,8 @@ ARCHWARNINGSXX	= $(ARCHWARNINGS) \
 			   	  -Wno-missing-field-initializers
 
 # pull in *just* libm from the toolchain ... this is grody
-#LIBM			:= $(shell $(CC) $(ARCHCPUFLAGS) -print-file-name=libm.a)
-#EXTRA_LIBS		+= $(LIBM)
+LIBM			:= $(shell $(CC) $(FLAGS_CORTEXM4F) -print-file-name=libm.a)
+EXTRA_LIBS		+= $(LIBM)
 
 # Flags we pass to the C compiler
 CFLAGS		   = 	$(ARCHCFLAGS) \
@@ -129,7 +129,7 @@ LDFLAGS		   += $(addprefix -T,$(LDSCRIPT)) \
 
 # Compiler support library
 #
-#LIBGCC			:= $(shell $(CC) $(ARCHCPUFLAGS) -print-libgcc-file-name)
+LIBGCC			:= $(shell $(CC) $(FLAGS_CORTEXM4F) -print-libgcc-file-name)
 
 # Files that the final link depends on
 #
@@ -186,7 +186,7 @@ endef
 define LINK
 	@echo "LINK:    $1"
 	@mkdir -p $(dir $1)
-	$(Q) $(LD) $(LDFLAGS) -Map $1.map -o $1 --start-group $2 $(LIBS) $(LIBGCC) --end-group
+	$(Q) $(LD) $(LDFLAGS) -Map $1.map -o $1 --start-group $2 $(LIBS) $(EXTRA_LIBS) $(LIBGCC) --end-group
 endef
 
 # Convert $1 from a linked object to a raw binary in $2
