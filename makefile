@@ -4,9 +4,9 @@
 # brief		: configure and build nuttx
 #
 
-.PHONY: all clean upload
+.PHONY: all clean distclean upload
 
-all:archive firmware
+all:firmware
 
 # get current top makefile's absolute path 
 PATH_BASE := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
@@ -20,6 +20,9 @@ NUTTX_SRC := $(PATH_BASE)/nuttx/nuttx
 # nuttx export directory path
 BUILD_DIR := $(PATH_BASE)/build
 
+# build src files 
+BUILD_SRC_DIR := $(PATH_BASE)/build/src
+
 # nuttx board export 
 NUTTX_EXPORT = $(BOARD).zip
 
@@ -30,8 +33,11 @@ FIRMWARE_ELF := $(BUILD_DIR)/firmware.elf
 # jobs
 J ?= 4
 
+include $(PATH_BASE)/makefiles/toolchain-arm.mk
+include $(PATH_BASE)/makefiles/nuttx.mk
+
 # build nuttx and export
-archive:$(NUTTX_EXPORT) 
+archive:$(NUTTX_CONFIG_HEADER)
 
 # config and export nuttx
 $(NUTTX_EXPORT) : $(NUTTX_SRC)
@@ -48,29 +54,31 @@ $(NUTTX_EXPORT) : $(NUTTX_SRC)
 	cp -rf $(NUTTX_SRC)/nuttx-export.zip $(BUILD_DIR)/$@
 	cd $(NUTTX_SRC)/configs && rm -rf $(BOARD)
 
-include $(PATH_BASE)/makefiles/toolchain-arm.mk
-include $(PATH_BASE)/makefiles/nuttx.mk
-
 # unzip Nuttx's export
-firmware:$(NUTTX_CONFIG_HEADER) $(FIRMWARE_ELF) $(FIRMWARE_BIN)
+firmware:$(FIRMWARE_ELF) $(FIRMWARE_BIN)
 
 # build user's src
 SRCS			 = main.c
-OBJS			 = $(foreach src, $(SRCS), $(BUILD_DIR)/$(addsuffix .o,$(SRCS)))
-OBJS			 = $(foreach src, $(SRCS), $(BUILD_DIR)/$(addsuffix .d,$(SRCS)))
+OBJS			 = $(foreach src, $(SRCS), $(BUILD_SRC_DIR)/$(addsuffix .o,$(SRCS)))
+OBJS			 = $(foreach src, $(SRCS), $(BUILD_SRC_DIR)/$(addsuffix .d,$(SRCS)))
 
 $(OBJS):$(SRCS)
+	mkdir -p $(BUILD_SRC_DIR)
 	$(call COMPILE,$<,$@)
 
 $(FIRMWARE_BIN):$(FIRMWARE_ELF)
 	$(call SYM_TO_BIN,$<,$@)
 
 $(FIRMWARE_ELF):$(OBJS) $(LINK_DEPS)
+	$(info NUTTX_CONFIG_HEADER = $(NUTTX_CONFIG_HEADER))
 	$(call LINK,$@,$(OBJS))
 
-clean:
+distclean:
 	rm -rf build/*
 	$(MAKE) -r -j$(J) -C $(NUTTX_SRC) distclean
+
+clean:
+	rm -rf $(BUILD_SRC_DIR)
 
 upload:$(FIRMWARE_BIN)
 	st-flash write $(FIRMWARE_BIN) 0x8000000
