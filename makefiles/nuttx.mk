@@ -4,6 +4,12 @@
 # brief		: deal with $(BOARD).zip
 #
 
+# include setup makefile
+include $(PATH_BASE)/makefiles/setup.mk
+
+# export zip file 
+NUTTX_EXPORT = stm32f429discovery.zip
+
 # unzip directory
 NUTTX_EXPORT_DIR	 = $(BUILD_DIR)/nuttx-export
 NUTTX_CONFIG_HEADER	 = $(NUTTX_EXPORT_DIR)/include/nuttx/config.h

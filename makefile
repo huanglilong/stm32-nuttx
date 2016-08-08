@@ -4,30 +4,31 @@
 # brief		: configure and build nuttx
 #
 
-.PHONY: all clean distclean upload
-
-all:firmware
+.PHONY: firmware clean distclean upload
 
 # get current top makefile's absolute path 
-PATH_BASE := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
+export PATH_BASE := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
+
+# include setup makefile
+include $(PATH_BASE)/makefiles/setup.mk
 
 # board
 BOARD := stm32f429discovery
 
 # nuttx path
-NUTTX_SRC := $(PATH_BASE)/nuttx/nuttx
+# NUTTX_SRC := $(PATH_BASE)/nuttx/nuttx
 
 # nuttx board export 
 NUTTX_EXPORT = $(BOARD).zip
 
 # user source directory
-USER_SRC_DIR := $(PATH_BASE)/src
+# USER_SRC_DIR := $(PATH_BASE)/src
 
 # nuttx export directory path
-BUILD_DIR := $(PATH_BASE)/build
+# BUILD_DIR := $(PATH_BASE)/build
 
 # build src files 
-BUILD_SRC_DIR := $(BUILD_DIR)/src
+# BUILD_SRC_DIR := $(BUILD_DIR)/src
 
 # firmware file
 FIRMWARE_BIN := $(BUILD_DIR)/firmware.bin
@@ -36,11 +37,8 @@ FIRMWARE_ELF := $(BUILD_DIR)/firmware.elf
 # jobs
 J ?= 4
 
-include $(PATH_BASE)/makefiles/toolchain-arm.mk
-include $(PATH_BASE)/makefiles/nuttx.mk
-
 # build nuttx and export
-archive:$(NUTTX_CONFIG_HEADER)
+archive:$(NUTTX_EXPORT)
 
 # config and export nuttx
 $(NUTTX_EXPORT) : $(NUTTX_SRC)
@@ -57,35 +55,18 @@ $(NUTTX_EXPORT) : $(NUTTX_SRC)
 	cp -rf $(NUTTX_SRC)/nuttx-export.zip $(BUILD_DIR)/$@
 	cd $(NUTTX_SRC)/configs && rm -rf $(BOARD)
 
-# unzip Nuttx's export
-firmware:$(FIRMWARE_ELF) $(FIRMWARE_BIN)
-
-# build user's src
-SRCS			 = $(USER_SRC_DIR)/buttons/*.c
-OBJS			 = $(foreach src, $(SRCS), $(BUILD_SRC_DIR)/$(notdir $(addsuffix .o,$(SRCS))))
-DEPS			 = $(foreach src, $(SRCS), $(BUILD_SRC_DIR)/$(notdir $(addsuffix .d,$(SRCS))))
-
-# user header file search path 
-INCLUDE_DIRS += $(USER_SRC_DIR)
-
-$(OBJS):$(SRCS)
-	mkdir -p $(BUILD_SRC_DIR)
-	$(call COMPILE,$<,$@)
-
-$(FIRMWARE_BIN):$(FIRMWARE_ELF)
-	$(call SYM_TO_BIN,$<,$@)
-
-$(FIRMWARE_ELF):$(OBJS)
-	$(call LINK,$@,$(OBJS))
+firmware:
+	@echo %%%%
+	@echo %%%% Building firmware
+	@echo %%%%
+	mkdir -p $(BUILD_DIR)
+	$(MAKE) -r -C $(BUILD_DIR) \
+		-f $(MAKEFILE_DIR)/firmware.mk \
+		firmware
 
 distclean:
 	rm -rf build/*
 	$(MAKE) -r -j$(J) -C $(NUTTX_SRC) distclean
 
-clean:
-	rm -rf $(BUILD_SRC_DIR)
-
 upload:
 	st-flash write $(FIRMWARE_BIN) 0x8000000
-
--include $(DEPS)
