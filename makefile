@@ -13,22 +13,10 @@ export PATH_BASE := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 include $(PATH_BASE)/makefiles/setup.mk
 
 # board
-BOARD := stm32f429discovery
+export BOARD := stm32f429discovery
 
-# nuttx path
-# NUTTX_SRC := $(PATH_BASE)/nuttx/nuttx
-
-# nuttx board export 
-NUTTX_EXPORT = $(BOARD).zip
-
-# user source directory
-# USER_SRC_DIR := $(PATH_BASE)/src
-
-# nuttx export directory path
-# BUILD_DIR := $(PATH_BASE)/build
-
-# build src files 
-# BUILD_SRC_DIR := $(BUILD_DIR)/src
+# config
+export CONGIF := nsh_romfs
 
 # firmware file
 FIRMWARE_BIN := $(BUILD_DIR)/firmware.bin
@@ -46,13 +34,13 @@ $(NUTTX_EXPORT) : $(NUTTX_SRC)
 	@echo % First configure Nuttx for $(BOARD)
 	@echo %
 	cd $(NUTTX_SRC)/configs && cp -rf $(PATH_BASE)/nuttx-configs/$(BOARD) .
-	cd $(NUTTX_SRC)/tools && ./configure.sh $(BOARD)/nsh_romfs
+	cd $(NUTTX_SRC)/tools && ./configure.sh $(BOARD)/$(CONGIF)
 	@echo %
 	@echo % Second build Nuttx for $(BOARD)
 	@echo %
 	$(MAKE) -r -j$(J) -C $(NUTTX_SRC) -r CONFIG_ARCH_BOARD=$(BOARD) export
 	mkdir -p $(BUILD_DIR)
-	cp -rf $(NUTTX_SRC)/nuttx-export.zip $(BUILD_DIR)/$@
+	cp -rf $(NUTTX_SRC)/nuttx-export.zip $@
 	cd $(NUTTX_SRC)/configs && rm -rf $(BOARD)
 
 firmware:

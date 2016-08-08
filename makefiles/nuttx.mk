@@ -7,9 +7,6 @@
 # include setup makefile
 include $(PATH_BASE)/makefiles/setup.mk
 
-# export zip file 
-NUTTX_EXPORT = stm32f429discovery.zip
-
 # unzip directory
 NUTTX_EXPORT_DIR	 = $(BUILD_DIR)/nuttx-export
 NUTTX_CONFIG_HEADER	 = $(NUTTX_EXPORT_DIR)/include/nuttx/config.h
@@ -33,7 +30,7 @@ LINK_DEPS			 += $(NUTTX_LIBS)
 
 $(NUTTX_CONFIG_HEADER):	$(NUTTX_EXPORT)
 	@echo %% Unpacking $(NUTTX_EXPORT)
-	unzip -q -o -d $(BUILD_DIR) $(BUILD_DIR)/$(NUTTX_EXPORT)
+	unzip -q -o -d $(BUILD_DIR) $(NUTTX_EXPORT)
 	touch $@
 
  #$(LDSCRIPT): $(NUTTX_CONFIG_HEADER)
