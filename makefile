@@ -4,7 +4,7 @@
 # brief		: configure and build nuttx
 #
 
-.PHONY: firmware clean distclean upload
+.PHONY: archive firmware clean distclean upload
 
 # get current top makefile's absolute path 
 export PATH_BASE := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
@@ -31,30 +31,43 @@ archive:$(NUTTX_EXPORT)
 # config and export nuttx
 $(NUTTX_EXPORT) : $(NUTTX_SRC)
 	@echo %
-	@echo % First configure Nuttx for $(BOARD)
+	@echo % Configure Nuttx for $(BOARD)
 	@echo %
 	cd $(NUTTX_SRC)/configs && cp -rf $(PATH_BASE)/nuttx-configs/$(BOARD) .
 	cd $(NUTTX_SRC)/tools && ./configure.sh $(BOARD)/$(CONGIF)
 	@echo %
-	@echo % Second build Nuttx for $(BOARD)
+	@echo % Build Nuttx for $(BOARD)
 	@echo %
 	$(MAKE) -r -j$(J) -C $(NUTTX_SRC) -r CONFIG_ARCH_BOARD=$(BOARD) export
 	mkdir -p $(BUILD_DIR)
 	cp -rf $(NUTTX_SRC)/nuttx-export.zip $@
 	cd $(NUTTX_SRC)/configs && rm -rf $(BOARD)
 
+# build firmware
 firmware:
 	@echo %%%%
 	@echo %%%% Building firmware
 	@echo %%%%
 	mkdir -p $(BUILD_DIR)
 	$(MAKE) -r -C $(BUILD_DIR) \
-		-f $(MAKEFILE_DIR)/firmware.mk \
-		firmware
+	-f $(MAKEFILE_DIR)/firmware.mk \
+	firmware
 
+# clean firmware
+clean:
+	@echo %
+	@echo % Clean firmware
+	@echo %
+	@rm -rf $(BUILD_SRC_DIR)
+
+# clean firmware, archive and configure
 distclean:
-	rm -rf build/*
+	@echo %
+	@echo % Clean firmware, archive and configure
+	@echo %
+	@rm -rf $(BUILD_DIR)
 	$(MAKE) -r -j$(J) -C $(NUTTX_SRC) distclean
 
+# upload firmware
 upload:
 	st-flash write $(FIRMWARE_BIN) 0x8000000
