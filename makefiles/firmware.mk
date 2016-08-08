@@ -5,8 +5,6 @@
 # ref       : https://github.com/hll4fork/Firmware-old/blob/master/makefiles/firmware.mk
 # 
 
-all:		firmware
-
 # get firmware.mk file's directory
 MK_DIR :=$(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 $(info % MK_DIR = $(MK_DIR))
@@ -17,7 +15,7 @@ export PATH_BASE  := $(abspath $(MK_DIR)/..)
 endif
 
 # module build dir
-BUILD_SRC_DIR := $(BUILD_DIR)/src
+#BUILD_SRC_DIR := $(BUILD_DIR)/src
 
 # common
 include $(MK_DIR)/setup.mk
@@ -64,30 +62,16 @@ $(MODULE_OBJS):		$(GLOBAL_DEPS) $(NUTTX_CONFIG_HEADER)
 
 # build firmware
 .PHONY:			 firmware
-FIRMWARE_BIN	 = $(BUILD_SRC_DIR)/firmware.bin
-FIRMWARE_ELF     = $(BUILD_SRC_DIR)/firmware.elf
+FIRMWARE_BIN	 = $(BUILD_DIR)/firmware.bin
+FIRMWARE_ELF     = $(BUILD_DIR)/firmware.elf
 
 # unzip Nuttx's export
 firmware:$(FIRMWARE_BIN)
 
-# build user's src
-OBJS			 := $(foreach src,$(SRCS),$(WORK_DIR)$(src).o)
-
-$(OBJS):		$(GLOBAL_DEPS)
-
-$(filter %.c.o,$(OBJS)): $(BUILD_SRC_DIR)%.c.o: %.c $(GLOBAL_DEPS)
-	$(call COMPILE,$<,$@)
-
-$(filter %.cpp.o,$(OBJS)): $(BUILD_SRC_DIR)%.cpp.o: %.cpp $(GLOBAL_DEPS)
-	$(call COMPILEXX,$<,$@)
-
-$(filter %.S.o,$(OBJS)): $(BUILD_SRC_DIR)%.S.o: %.S $(GLOBAL_DEPS)
-	$(call ASSEMBLE,$<,$@)
-
 $(FIRMWARE_BIN):		$(FIRMWARE_ELF)
 	$(call SYM_TO_BIN,$<,$@)
 
-$(FIRMWARE_ELF):		$(OBJS) $(MODULE_OBJS) $(GLOBAL_DEPS) $(LINK_DEPS) $(MODULE_MKFILES)
-	$(call LINK,$@,$(OBJS) $(MODULE_OBJS))
+$(FIRMWARE_ELF):		$(MODULE_OBJS) $(GLOBAL_DEPS) $(LINK_DEPS) $(MODULE_MKFILES)
+	$(call LINK,$@,$(MODULE_OBJS))
 
 -include $(DEP_INCLUDES)
