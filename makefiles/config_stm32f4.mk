@@ -10,3 +10,5 @@ MODULES += platform
 
 # user applications
 MODULES += buttons
+
+MODULES += hello
