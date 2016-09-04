@@ -9,6 +9,8 @@
 MODULES += platform
 
 # user applications
-MODULES += buttons
+MODULES += modules/buttons
 
-MODULES += hello
+MODULES += modules/hello
+
+# drivers
