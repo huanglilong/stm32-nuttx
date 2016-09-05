@@ -1,5 +1,5 @@
 # stm32-nuttx
-Nuttx notes
+[Nuttx notes](https://huanglilong.gitbooks.io/nuttx-notes/content/)
 
 # Environment
   1. arm-none-eabi-gcc version 4.9.3 and 5.4.1 has been tested.
