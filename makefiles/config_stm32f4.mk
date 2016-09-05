@@ -14,3 +14,4 @@ MODULES += modules/buttons
 MODULES += modules/hello
 
 # drivers
+MODULES += drivers/led

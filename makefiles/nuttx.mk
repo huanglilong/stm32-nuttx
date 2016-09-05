@@ -20,7 +20,8 @@ LDSCRIPT			 += $(NUTTX_EXPORT_DIR)/build/ld.script
 INCLUDE_DIRS   		 += $(NUTTX_EXPORT_DIR)/include     \
 			   			$(NUTTX_EXPORT_DIR)/include/cxx \
 			   			$(NUTTX_EXPORT_DIR)/arch/chip   \
-			   			$(NUTTX_EXPORT_DIR)/arch/common
+			   			$(NUTTX_EXPORT_DIR)/arch/common \
+						$(NUTTX_EXPORT_DIR)/arch/board
 
 LIB_DIRS			 += $(NUTTX_EXPORT_DIR)/libs
 LIBS				 += -lapps -lnuttx
