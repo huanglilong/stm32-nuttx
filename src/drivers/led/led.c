@@ -11,6 +11,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 #include <unistd.h>
 #include <errno.h>
 #include <sched.h>
@@ -73,16 +74,29 @@ void led_register(void)
 	(void)register_driver("/dev/led1", &led_ops, 0444, NULL);
 }
 
-// for test
 int led_main(int argc, char *argv[])
 {
-	char on = 1;
-
 	led_register();
 	int fd = open("/dev/led1", O_RDONLY);
-	printf("fd is %d", fd);
+	//printf("fd is %d\n", fd);
 
-	read(fd, &on, sizeof(on));
+	if (argc < 2) {
+		printf("missing command\n");
+		return 0;
+	}
 
+	if (!strcmp(argv[1], "on")) {
+		char on = 1;
+		read(fd, &on, sizeof(on));
+		return 0;
+	}
+
+	if (!strcmp(argv[1], "off")) {
+		char on = 0;
+		read(fd, &on, sizeof(on));
+		return 0;
+	}
+
+	printf("invaild command args\n");
 	return 0;
 }
