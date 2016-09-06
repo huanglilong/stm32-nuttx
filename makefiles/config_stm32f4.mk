@@ -15,3 +15,4 @@ MODULES += modules/hello
 
 # drivers
 MODULES += drivers/led
+MODULES += drivers/mpu6050
