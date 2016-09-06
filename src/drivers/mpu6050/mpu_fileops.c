@@ -123,8 +123,9 @@ static const struct file_operations g_mpu_fops =
   0,            /* seek */
   mpu_ioctl,    /* ioctl */
 #ifndef CONFIG_DISABLE_POLL
-  mpu_poll      /* poll */
+  mpu_poll,     /* poll */
 #endif
+  0
 };
 
 /****************************************************************************
@@ -451,7 +452,7 @@ static ssize_t mpu_read(FAR struct file *filep, FAR char *buffer, size_t len)
     FAR struct inode *inode     = filep->f_inode;
     FAR struct mpu_dev_s *dev    = inode->i_private;
 
-    int size = 0;
+    size_t size = 0;
 
     res = mpu_takesem(&dev->exclsem, true);
     if ( res < 0 )
@@ -651,7 +652,7 @@ int mpu_fileops_init(struct mpu_inst_s* inst,const char *path ,int minor )
     dev = (FAR struct mpu_dev_s *)kmm_zalloc(sizeof(struct mpu_dev_s));
     if (!dev)
     {
-        sndbg("Failed to allocate the device structure!\n");
+        //sndbg("Failed to allocate the device structure!\n");
         return -ENOMEM;
     }
 
@@ -672,7 +673,7 @@ int mpu_fileops_init(struct mpu_inst_s* inst,const char *path ,int minor )
 
     if (res < 0)
     {
-        sndbg("ERROR: Failed to register driver %s: %d\n", devname, res);
+        //sndbg("ERROR: Failed to register driver %s: %d\n", devname, res);
         return res;
     }
 

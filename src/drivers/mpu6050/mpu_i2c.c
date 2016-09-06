@@ -31,7 +31,7 @@ struct mpu_i2c_low_s
     const struct mpu_low_ops_s *ops;
     int mpu_addr;
     int akm_addr;
-    struct i2c_dev_s* i2c;
+    struct i2c_master_s* i2c;
 };
 
 /****************************************************************************
@@ -94,7 +94,7 @@ static int mpu_i2c_trans(FAR struct mpu_i2c_low_s* i2c_low, int i2c_addr, bool r
   ret = I2C_TRANSFER(i2c_low->i2c, msg, 2);
   if (ret < 0)
     {
-      sndbg("I2C_TRANSFER failed: %d\n", ret);
+      //sndbg("I2C_TRANSFER failed: %d\n", ret);
       return -1;
     }
 
@@ -147,7 +147,7 @@ static int akm_i2c_read(FAR struct mpu_low_s* low, int reg_off, uint8_t *buf,
  * Public Functions
  ****************************************************************************/
 struct mpu_low_s* mpu_low_i2c_init(int devno, int mpu_addr, int akm_addr, 
-                                   FAR struct i2c_dev_s* i2c)
+                                   FAR struct i2c_master_s* i2c)
 {
     struct mpu_i2c_low_s* mpu_i2c;
 

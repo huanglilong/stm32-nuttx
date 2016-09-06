@@ -274,9 +274,9 @@ struct mpu_low_s* mpu_low_spi_init(int devno, int akm_addr,
 #endif
 
 #ifdef CONFIG_INVENSENSE_I2C
-struct i2c_dev_s; /* See nuttx/i2c/i2c_master.h */
+struct i2c_master_s; /* See nuttx/i2c/i2c_master.h */
 struct mpu_low_s* mpu_low_i2c_init(int devno, int mpu_addr, int akm_addr, 
-                                   FAR struct i2c_dev_s* i2c);
+                                   FAR struct i2c_master_s* i2c);
 #endif
 
 /* Setup function */
