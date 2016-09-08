@@ -54,7 +54,7 @@
 
 #if defined(CONFIG_I2C) && defined(CONFIG_MPU6050)
 
-#define MPU6050_I2C_PORTNO 2
+#define MPU6050_I2C_PORTNO 1
 int mpu6050_register(FAR const char *devpath, FAR struct i2c_master_s *i2c);
 
 /************************************************************************************

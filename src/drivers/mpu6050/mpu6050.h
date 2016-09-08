@@ -43,7 +43,7 @@
 
 #if defined(CONFIG_I2C) && defined(CONFIG_MPU6050)
 
-#define MPU6050_I2C_PORTNO 2
+#define MPU6050_I2C_PORTNO 1
 
 /****************************************************************************
  * Name: mpu6050_register

@@ -44,12 +44,18 @@
 #pragma GCC diagnostic warning "-Wunused-function"
 
 #include <nuttx/config.h>
-
+#include <nuttx/arch.h>
 #include <stdlib.h>
 #include <fixedmath.h>
 #include <errno.h>
 #include <debug.h>
+#include <fcntl.h>
 
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <unistd.h>
+#include <sched.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/i2c/i2c_master.h>
@@ -856,5 +862,15 @@ static ssize_t mpu6050_write(FAR struct file *filep, FAR const char *buffer, siz
 
 	sninfo("MPU6050 driver loaded successfully!\n");
 	return ret;
+ }
+
+ /* for debug */
+ int mpu6050_main(int argc, char *argv[]);
+ int mpu6050_main(int argc, char *argv[])
+ {
+ 	//led_register();
+ 	int fd = open("/dev/mpu6050", O_RDONLY);
+ 	printf("fd is %d\n", fd);
+ 	return 0;
  }
 #endif /* CONFIG_I2C && CONFIG_MPU6050 */
