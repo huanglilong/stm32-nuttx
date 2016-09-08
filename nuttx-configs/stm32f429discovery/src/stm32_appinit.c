@@ -378,5 +378,9 @@ int board_app_initialize(uintptr_t arg)
     }
 #endif
 
+#if defined(CONFIG_I2C) && defined(CONFIG_MPU6050)
+	stm32_mpu6050_initialize("/dev/mpu6050");
+#endif
+
   return OK;
 }

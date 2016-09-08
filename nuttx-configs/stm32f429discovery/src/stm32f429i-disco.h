@@ -265,6 +265,25 @@ FAR struct ili9341_lcd_s *stm32_ili93414ws_initialize(void);
 FAR struct spi_dev_s *stm32_spi5initialize(void);
 #endif
 
+#if defined(CONFIG_I2C) && defined(CONFIG_MPU6050)
+
+/************************************************************************************
+ * Name: stm32_mpu6050_initialize
+ *
+ * Description:
+ *   Initialize and register the MPU6050 Pressure Sensor driver.
+ *
+ * Input parameters:
+ *   devpath - The full path to the driver to register. E.g., "/dev/mpu6050"
+ *
+ * Returned Value:
+ *   Zero (OK) on success; a negated errno value on failure.
+ *
+ ************************************************************************************/
+ int stm32_mpu6050_initialize(FAR const char *devpath);
+ 
+ #endif
+ 
 #endif /* __ASSEMBLY__ */
 #endif /* __CONFIGS_STM32F429I_DISCO_SRC_STM32F429I_DISCO_H */
 
