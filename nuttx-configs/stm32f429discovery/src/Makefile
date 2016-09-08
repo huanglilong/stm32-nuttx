@@ -79,4 +79,8 @@ ifeq ($(CONFIG_ARCH_FPU),y)
 CSRCS += stm32_ostest.c
 endif
 
+ifeq ($(CONFIG_MPU6050),y)
+CSRCS += stm32_mpu6050.c
+endif
+
 include $(TOPDIR)/configs/Board.mk

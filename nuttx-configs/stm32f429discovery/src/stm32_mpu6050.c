@@ -1,5 +1,5 @@
-/********************************************************************************************
- * drivers/mpu6050/mpu6050.h
+/************************************************************************************
+ * nuttx-configs/stm32f429discovery/src/stm32_mpu6050.c
  *
  *   Copyright (C) 2016 huang li long. All rights reserved.
  *   Author: huang li long <huanglilongwk@outlook.com>
@@ -34,33 +34,65 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- ********************************************************************************************/
-#ifndef __DRIVER_MPU6050_H
-#define __DRIVER_MPU6050_H
+ ************************************************************************************/
+
+/************************************************************************************
+ * Included Files
+ ************************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/i2c/i2c_master.h>
+
+#include <errno.h>
+#include <debug.h>
+
+//#include <nuttx/spi/spi.h>
+//#include <mpu6050.h>
+
+#include "stm32.h"
+#include "stm32_i2c.h"
+#include "stm32f429i-disco.h"
 
 #if defined(CONFIG_I2C) && defined(CONFIG_MPU6050)
 
 #define MPU6050_I2C_PORTNO 2
+int mpu6050_register(FAR const char *devpath, FAR struct i2c_master_s *i2c);
 
-/****************************************************************************
- * Name: mpu6050_register
+/************************************************************************************
+ * Name: stm32_mpu6050_initialize
  *
  * Description:
- *   Register the MPU6050 character device as 'devpath'
+ *   Initialize and register the MPU6050 Pressure Sensor driver.
  *
- * Input Parameters:
+ * Input parameters:
  *   devpath - The full path to the driver to register. E.g., "/dev/mpu6050"
- *   i2c     - An instance of the I2C interface to use to communicate with
- *             MPU6050
  *
  * Returned Value:
  *   Zero (OK) on success; a negated errno value on failure.
  *
- ****************************************************************************/
-int mpu6050_register(FAR const char *devpath, FAR struct i2c_master_s *i2c);
+ ************************************************************************************/
 
-#endif /* CONFIG_I2C && CONFIG_MPU6050 */
+int stm32_mpu6050_initialize(FAR const char *devpath)
+{
+  FAR struct i2c_master_s *i2c;
+  int ret;
+
+  sninfo("Initializing MPU6050!\n");
+
+  /* Initialize I2C */
+  i2c = stm32_i2cbus_initialize(MPU6050_I2C_PORTNO);
+
+  if (!i2c)
+  {
+	  return -ENODEV;
+  }
+
+  /* Then register the barometer sensor */
+  ret = mpu6050_register(devpath, i2c);
+  if (ret < 0)
+  {
+	  snerr("ERROR: Error registering MPU6050\n");
+  }
+
+  return ret;
+}
 #endif
