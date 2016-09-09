@@ -448,7 +448,7 @@ static void 	mpu6050_set_clock_source(FAR struct mpu6050_dev_s *priv, uint8_t so
 static void 	mpu6050_set_full_scale_gyro_range(FAR struct mpu6050_dev_s *priv, uint8_t range);
 static void 	mpu6050_set_full_scale_accel_range(FAR struct mpu6050_dev_s *priv, uint8_t range);
 static void 	mpu6050_set_sleep_enabled(FAR struct mpu6050_dev_s *priv, uint8_t enabled);
-static uint8_t 	mpu6050_get_device_id(void);
+static uint8_t 	mpu6050_get_device_id(FAR struct mpu6050_dev_s *priv);
 static uint8_t 	mpu6050_test_connection(void);
 static void 	mpu6050_set_i2c_master_mode_enabled(FAR struct mpu6050_dev_s *priv, uint8_t enabled);
 static void 	mpu6050_set_i2c_bypass_enabled(FAR struct mpu6050_dev_s *priv, uint8_t enabled);
@@ -597,6 +597,13 @@ static uint16_t mpu6050_getreg16(FAR struct mpu6050_dev_s *priv, uint8_t regaddr
 	 return;
  }
 
+static uint8_t mpu6050_get_device_id(FAR struct mpu6050_dev_s *priv)                  
+{
+	uint8_t regval = 0;
+	regval = mpu6050_getreg8(priv, MPU6050_RA_WHO_AM_I);
+	return regval;
+    //return I2C_Read(devAddr, MPU6050_RA_WHO_AM_I);
+}
 /*
  * --------+--------------------------------------
  * 0       | Internal oscillator
@@ -648,18 +655,11 @@ static void mpu6050_set_sleep_enabled(FAR struct mpu6050_dev_s *priv, uint8_t en
     //I2C_writeBit(devAddr, MPU6050_RA_PWR_MGMT_1, MPU6050_PWR1_SLEEP_BIT, enabled);
 }
 
-
-static uint8_t mpu6050_get_device_id(void)                  
-{
-    //return I2C_Read(devAddr, MPU6050_RA_WHO_AM_I);
-	return 0;
-}
-
 static uint8_t mpu6050_test_connection(void)              
 {
-   if(mpu6050_get_device_id() == 0x68)  //0b01101000;
-     return 1;
-   else 
+//    if(mpu6050_get_device_id() == 0x68)  //0b01101000;
+//      return 1;
+//    else 
      return 0;
 }
 
@@ -780,8 +780,10 @@ static int mpu6050_open (FAR struct file *filep)
 	FAR struct inode			*inode = filep->f_inode;
 	FAR struct mpu6050_dev_s 	*priv  = inode->i_private;
 
-	uint8_t source = MPU6050_CLOCK_PLL_XGYRO;
-	mpu6050_set_clock_source(priv, source);
+	uint8_t regval;
+	regval = mpu6050_get_device_id(priv);
+
+	printf("after write: register value is %d\n", regval);
 	return 0;
 }
 
@@ -849,7 +851,7 @@ static ssize_t mpu6050_write(FAR struct file *filep, FAR const char *buffer, siz
 	 }
 
 	 priv->i2c 		= i2c;
-	 priv->addr 	= MPU6050_DEVICE_ADDRESS;
+	 priv->addr 	= MPU6050_ADDRESS_AD0_LOW;//MPU6050_DEVICE_ADDRESS;
 	 priv->freq		= MPU6050_I2C_FREQ_MAX;
 
 	 /* register the mpu6050 charater driver */
