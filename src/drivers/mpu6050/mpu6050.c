@@ -449,13 +449,15 @@ static void 	mpu6050_set_full_scale_gyro_range(FAR struct mpu6050_dev_s *priv, u
 static void 	mpu6050_set_full_scale_accel_range(FAR struct mpu6050_dev_s *priv, uint8_t range);
 static void 	mpu6050_set_sleep_enabled(FAR struct mpu6050_dev_s *priv, uint8_t enabled);
 static uint8_t 	mpu6050_get_device_id(FAR struct mpu6050_dev_s *priv);
-static uint8_t 	mpu6050_test_connection(void);
 static void 	mpu6050_set_i2c_master_mode_enabled(FAR struct mpu6050_dev_s *priv, uint8_t enabled);
 static void 	mpu6050_set_i2c_bypass_enabled(FAR struct mpu6050_dev_s *priv, uint8_t enabled);
-static void 	mpu6050_initialize(void);
+static void 	mpu6050_initialize(FAR struct mpu6050_dev_s *priv);
 static uint8_t 	mpu6050_is_rdy(void);
 static void 	mpu6050_get_motion(void);
 static void 	mpu6050_init_gyro_Offset(void);
+static void 	mpu6050_interrupt_config(FAR struct mpu6050_dev_s *priv);
+static void     mpu6050_write_bits(FAR struct mpu6050_dev_s *priv, uint8_t regaddr, uint8_t bit_start, uint8_t len, uint8_t data);
+static void 	mpu6050_write_bit(FAR struct mpu6050_dev_s *priv, uint8_t regaddr, uint8_t bit_num, uint8_t data);
 
 /* Character driver methods */
 static int     mpu6050_open (FAR struct file *filep);
@@ -597,12 +599,35 @@ static uint16_t mpu6050_getreg16(FAR struct mpu6050_dev_s *priv, uint8_t regaddr
 	 return;
  }
 
+static void mpu6050_write_bits(FAR struct mpu6050_dev_s *priv, uint8_t regaddr, uint8_t bit_start, uint8_t len, uint8_t data)
+{
+    uint8_t regval, mask;
+    regval = mpu6050_getreg8(priv, regaddr);
+    mask = (0xFF << (bit_start + 1)) | 0xFF >> ((8 - bit_start) + len - 1);
+    data <<= (8 - len);
+    data >>= (7 - bit_start);
+    regval &= mask;
+    regval |= data;
+	mpu6050_putreg8(priv, regaddr, regval);
+}
+
+static void mpu6050_write_bit(FAR struct mpu6050_dev_s *priv, uint8_t regaddr, uint8_t bit_num, uint8_t data)
+{
+	uint8_t regval;
+	regval = mpu6050_getreg8(priv, regaddr);
+	regval = (data != 0) ? (regval | (1 << bit_num)) : (regval & ~(1 << bit_num));
+	mpu6050_putreg8(priv, regaddr, regval);
+}
+
+/*
+ * Name: mpu6050_get_device_id
+ *
+ * Description:
+ * 	Return mpu6050's i2c address, that should be 0x68 or 0x69
+ */
 static uint8_t mpu6050_get_device_id(FAR struct mpu6050_dev_s *priv)                  
 {
-	uint8_t regval = 0;
-	regval = mpu6050_getreg8(priv, MPU6050_RA_WHO_AM_I);
-	return regval;
-    //return I2C_Read(devAddr, MPU6050_RA_WHO_AM_I);
+	return mpu6050_getreg8(priv, MPU6050_RA_WHO_AM_I);
 }
 /*
  * --------+--------------------------------------
@@ -615,20 +640,12 @@ static uint8_t mpu6050_get_device_id(FAR struct mpu6050_dev_s *priv)
  * 6       | Reserved
  * 7       | Stops the clock and keeps the timing generator in reset
 *******************************************************************************/
-static void mpu6050_set_clock_source(FAR struct mpu6050_dev_s *priv, uint8_t source)   
+static void mpu6050_set_clock_source(FAR struct mpu6050_dev_s *priv, uint8_t data)
 {
-	uint8_t regval, mask;
-	uint8_t bit_start = MPU6050_PWR1_CLKSEL_BIT;
-	uint8_t len = MPU6050_PWR1_CLKSEL_LENGTH;
-	regval = mpu6050_getreg8(priv, MPU6050_RA_PWR_MGMT_1);		// get MPU6050_RA_PWR_MGMT_1 register's value
-    mask = (0xFF << (bit_start + 1)) | 0xFF >> ((8 - bit_start) + len - 1);
-    source <<= (8 - len);
-    source >>= (7 - bit_start);
-    regval &= mask;
-    regval |= source;
-
-	mpu6050_putreg8(priv, MPU6050_RA_PWR_MGMT_1, regval);
-    //I2C_writeBits(devAddr, MPU6050_RA_PWR_MGMT_1, MPU6050_PWR1_CLKSEL_BIT, MPU6050_PWR1_CLKSEL_LENGTH, source);
+	uint8_t regaddr 	= MPU6050_RA_PWR_MGMT_1;
+	uint8_t bit_start 	= MPU6050_PWR1_CLKSEL_BIT;
+	uint8_t len 		= MPU6050_PWR1_CLKSEL_LENGTH;
+	mpu6050_write_bits(priv, regaddr, bit_start, len, data);
 }
 
 /** Set full-scale gyroscope range.
@@ -641,130 +658,88 @@ static void mpu6050_set_clock_source(FAR struct mpu6050_dev_s *priv, uint8_t sou
  */
 static void mpu6050_set_full_scale_gyro_range(FAR struct mpu6050_dev_s *priv, uint8_t range)   
 {
-    //I2C_writeBits(devAddr, MPU6050_RA_GYRO_CONFIG, MPU6050_GCONFIG_FS_SEL_BIT, MPU6050_GCONFIG_FS_SEL_LENGTH, range);
+    uint8_t regaddr 	= MPU6050_RA_GYRO_CONFIG;
+	uint8_t bit_start 	= MPU6050_GCONFIG_FS_SEL_BIT;
+	uint8_t len 		= MPU6050_GCONFIG_FS_SEL_LENGTH;
+	mpu6050_write_bits(priv, regaddr, bit_start, len, range);
 }
 
 static void mpu6050_set_full_scale_accel_range(FAR struct mpu6050_dev_s *priv, uint8_t range)  
 {
-    //I2C_writeBits(devAddr, MPU6050_RA_ACCEL_CONFIG, MPU6050_ACONFIG_AFS_SEL_BIT, MPU6050_ACONFIG_AFS_SEL_LENGTH, range);
+	uint8_t regaddr 	= MPU6050_RA_ACCEL_CONFIG;
+	uint8_t bit_start 	= MPU6050_ACONFIG_AFS_SEL_BIT;
+	uint8_t len 		= MPU6050_ACONFIG_AFS_SEL_LENGTH;
+	mpu6050_write_bits(priv, regaddr, bit_start, len, range);
 }
 
 
 static void mpu6050_set_sleep_enabled(FAR struct mpu6050_dev_s *priv, uint8_t enabled)      
 {
-    //I2C_writeBit(devAddr, MPU6050_RA_PWR_MGMT_1, MPU6050_PWR1_SLEEP_BIT, enabled);
-}
-
-static uint8_t mpu6050_test_connection(void)              
-{
-//    if(mpu6050_get_device_id() == 0x68)  //0b01101000;
-//      return 1;
-//    else 
-     return 0;
+	uint8_t regaddr 	= MPU6050_RA_PWR_MGMT_1;
+	uint8_t bit_num 	= MPU6050_PWR1_SLEEP_BIT;
+	mpu6050_write_bit(priv, regaddr, bit_num, enabled);
 }
 
 static void mpu6050_set_i2c_master_mode_enabled(FAR struct mpu6050_dev_s *priv, uint8_t enabled)    
 {
-    //I2C_writeBit(devAddr, MPU6050_RA_USER_CTRL, MPU6050_USERCTRL_I2C_MST_EN_BIT, enabled);
+	uint8_t regaddr 	= MPU6050_RA_USER_CTRL;
+	uint8_t bit_num 	= MPU6050_USERCTRL_I2C_MST_EN_BIT;
+	mpu6050_write_bit(priv, regaddr, bit_num, enabled);
 }
 
 static void mpu6050_set_i2c_bypass_enabled(FAR struct mpu6050_dev_s *priv, uint8_t enabled)       
 {
-    //I2C_writeBit(devAddr, MPU6050_RA_INT_PIN_CFG, MPU6050_INTCFG_I2C_BYPASS_EN_BIT, enabled);
+	uint8_t regaddr 	= MPU6050_RA_INT_PIN_CFG;
+	uint8_t bit_num 	= MPU6050_INTCFG_I2C_BYPASS_EN_BIT;
+	mpu6050_write_bit(priv, regaddr, bit_num, enabled);
 }
 
-static void mpu6050_initialize(void) 
+static void mpu6050_interrupt_config(FAR struct mpu6050_dev_s *priv)
 {
-    // mpu6050_set_clock_source(MPU6050_CLOCK_PLL_XGYRO); 
-    // mpu6050_set_full_scale_gyro_range(MPU6050_GYRO_FS_1000);          // +- 1000dps
-    // mpu6050_set_full_scale_accel_range(MPU6050_ACCEL_FS_2);	          // +/- 2g
-    // mpu6050_set_sleep_enabled(0);                         
-    // mpu6050_set_i2c_master_mode_enabled(0);	                
+	uint8_t regaddr 	= MPU6050_RA_INT_PIN_CFG;
+	uint8_t bit_num 	= MPU6050_INTCFG_INT_LEVEL_BIT;
+	mpu6050_write_bit(priv, regaddr, bit_num, 0);
 
-    // I2C_writeBit(devAddr, MPU6050_RA_INT_PIN_CFG, MPU6050_INTCFG_INT_LEVEL_BIT, 0);     
-    // I2C_writeBit(devAddr, MPU6050_RA_INT_PIN_CFG, MPU6050_INTCFG_INT_OPEN_BIT, 0);			
-    // I2C_writeBit(devAddr, MPU6050_RA_INT_PIN_CFG, MPU6050_INTCFG_LATCH_INT_EN_BIT, 1);  
-    // I2C_writeBit(devAddr, MPU6050_RA_INT_PIN_CFG, MPU6050_INTCFG_INT_RD_CLEAR_BIT, 1); 
-    // I2C_writeBit(devAddr, MPU6050_RA_INT_ENABLE, MPU6050_INTERRUPT_DATA_RDY_BIT, 1);	  
+	regaddr 			= MPU6050_RA_INT_PIN_CFG;
+	bit_num 			= MPU6050_INTCFG_INT_OPEN_BIT;
+	mpu6050_write_bit(priv, regaddr, bit_num, 0);
 
-    //EXTILine0_Config();
-    //mpu6050_init_gyro_Offset();
+	regaddr 			= MPU6050_RA_INT_PIN_CFG;
+	bit_num 			= MPU6050_INTCFG_LATCH_INT_EN_BIT;
+	mpu6050_write_bit(priv, regaddr, bit_num, 1);
+
+	regaddr 			= MPU6050_RA_INT_PIN_CFG;
+	bit_num 			= MPU6050_INTCFG_INT_RD_CLEAR_BIT;
+	mpu6050_write_bit(priv, regaddr, bit_num, 1);
+
+	regaddr 			= MPU6050_RA_INT_ENABLE;
+	bit_num 			= MPU6050_INTERRUPT_DATA_RDY_BIT;
+	mpu6050_write_bit(priv, regaddr, bit_num, 1);
+}
+
+static void mpu6050_initialize(FAR struct mpu6050_dev_s *priv)
+{
+     mpu6050_set_clock_source(priv, MPU6050_CLOCK_PLL_XGYRO);
+     mpu6050_set_full_scale_gyro_range(priv, MPU6050_GYRO_FS_1000);          // +- 1000dps
+     mpu6050_set_full_scale_accel_range(priv, MPU6050_ACCEL_FS_2);	          // +/- 2g
+     mpu6050_set_sleep_enabled(priv ,0);
+     mpu6050_set_i2c_master_mode_enabled(priv, 0);
+     mpu6050_interrupt_config(priv);
 }
 
 static uint8_t mpu6050_is_rdy(void)
 {
-//   if(GPIO_ReadInputDataBit(GPIOB,GPIO_Pin_8)==Bit_SET)
-//     return 1;  
-//   else 
     return 0;
 }
 
 static void mpu6050_get_motion(void) 
 {
-      /* Acc data */ 
-    //   buffer[0] = I2C_Read(devAddr, MPU6050_RA_ACCEL_XOUT_H);
-    //   buffer[1] = I2C_Read(devAddr, MPU6050_RA_ACCEL_XOUT_L);
-    //   buffer[2] = I2C_Read(devAddr, MPU6050_RA_ACCEL_YOUT_H);
-    //   buffer[3] = I2C_Read(devAddr, MPU6050_RA_ACCEL_YOUT_L);
-    //   buffer[4] = I2C_Read(devAddr, MPU6050_RA_ACCEL_ZOUT_H);
-    //   buffer[5] = I2C_Read(devAddr, MPU6050_RA_ACCEL_ZOUT_L);
-    //   /* Gyro data */
-    //   buffer[6]  = I2C_Read(devAddr, MPU6050_RA_GYRO_XOUT_H);
-    //   buffer[7]  = I2C_Read(devAddr, MPU6050_RA_GYRO_XOUT_L);
-    //   buffer[8]  = I2C_Read(devAddr, MPU6050_RA_GYRO_YOUT_H);
-    //   buffer[9]  = I2C_Read(devAddr, MPU6050_RA_GYRO_YOUT_L);
-    //   buffer[10] = I2C_Read(devAddr, MPU6050_RA_GYRO_ZOUT_H);
-    //   buffer[11] = I2C_Read(devAddr, MPU6050_RA_GYRO_ZOUT_L);
-    //   /* Calculate Acc and Gyro data */
-    //   data->ax=(((int16_t)buffer[0]) << 8) | buffer[1];
-    //   data->ay=(((int16_t)buffer[2]) << 8) | buffer[3];
-    //   data->az=(((int16_t)buffer[4]) << 8) | buffer[5];
-    //   data->gx=(((int16_t)buffer[6]) << 8) | buffer[7];
-    //   data->gy=(((int16_t)buffer[8]) << 8) | buffer[9];
-    //   data->gz=(((int16_t)buffer[10]) << 8)| buffer[11];
-      
-    //   data->ax = (int16_t)(400.0 * data->ax/65535);
-    //   data->ay = (int16_t)(400.0 * data->ay/65535);
-    //   data->az = (int16_t)(400.0 * data->az/65535);
-    //   data->gx = (int16_t)(2000.0*(data->gx - Gx_offset)/65535);
-    //   data->gy = (int16_t)(2000.0*(data->gy - Gy_offset)/65535);
-    //   data->gz = (int16_t)(2000.0*(data->gz - Gz_offset)/65535);
+
 }
 
 static void mpu6050_init_gyro_Offset(void)
 {
-    //     OS_ERR  err;
-	// unsigned char i;
-	// MPU6050_Acc_Gyro temp;
-	// int32_t	tempgx=0,tempgy=0,tempgz=0;
-	// int32_t	tempax=0,tempay=0,tempaz=0;
-	// Gx_offset=0;
-	// Gy_offset=0;												  
-	// Gz_offset=0;
-	// for(i=0;i<10;i++)
-	// {
-  	// 	OSTimeDlyHMSM(0u, 0u, 0u, 1u,
-    //                   OS_OPT_TIME_HMSM_STRICT,
-    //                   &err);
-  	// 	MPU6050_getMotion6(&temp);
-	// }
- 	// for(i=0;i<100;i++)
-	// {
-	// 	OSTimeDlyHMSM(0u, 0u, 0u, 1u,
-    //                   OS_OPT_TIME_HMSM_STRICT,
-    //                   &err);
-	// 	MPU6050_getMotion6(&temp);
-	// 	tempax+= temp.ax;
-	// 	tempay+= temp.ay;
-	// 	tempaz+= temp.az;
-	// 	tempgx+= temp.gx;
-	// 	tempgy+= temp.gy;
-	// 	tempgz+= temp.gz;
-	// }
 
-	// Gx_offset=tempgx/100;//MPU6050_FIFO[3][10];
-	// Gy_offset=tempgy/100;//MPU6050_FIFO[4][10];
-	// Gz_offset=tempgz/100;//MPU6050_FIFO[5][10];
 }
 
 /****************************************************************************
@@ -780,11 +755,15 @@ static int mpu6050_open (FAR struct file *filep)
 	FAR struct inode			*inode = filep->f_inode;
 	FAR struct mpu6050_dev_s 	*priv  = inode->i_private;
 
-	uint8_t regval;
-	regval = mpu6050_get_device_id(priv);
-
-	printf("after write: register value is %d\n", regval);
-	return 0;
+	if(mpu6050_get_device_id(priv) == MPU6050_DEFAULT_ADDRESS)
+	{
+		mpu6050_initialize(priv);  // init mpu6050
+		return OK; // ok
+	}
+	else
+	{
+		return -1;
+	}
 }
 
 /****************************************************************************
@@ -796,7 +775,7 @@ static int mpu6050_open (FAR struct file *filep)
  ****************************************************************************/
 static int mpu6050_close(FAR struct file *filep)
 {
-	return 0;
+	return OK;
 }
 
 /****************************************************************************
@@ -804,9 +783,12 @@ static int mpu6050_close(FAR struct file *filep)
  ****************************************************************************/
 static ssize_t mpu6050_read (FAR struct file *filep, FAR char *buffer, size_t buflen)
 {
-	// FAR struct inode			*inode = filep->f_inode;
-	// FAR struct mpu6050_dev_s 	*priv  = inode->i_private;
+	FAR struct inode			*inode = filep->f_inode;
+	FAR struct mpu6050_dev_s 	*priv  = inode->i_private;
 
+	uint8_t regval =0;
+	regval = mpu6050_get_device_id(priv);
+	*buffer = (int8_t)regval;
 	return 6;
 }
 
@@ -862,17 +844,24 @@ static ssize_t mpu6050_write(FAR struct file *filep, FAR const char *buffer, siz
 		kmm_free(priv);
 	 }
 
-	sninfo("MPU6050 driver loaded successfully!\n");
-	return ret;
+	 sninfo("MPU6050 driver loaded successfully!\n");
+	 return ret;
  }
 
  /* for debug */
  int mpu6050_main(int argc, char *argv[]);
  int mpu6050_main(int argc, char *argv[])
  {
- 	//led_register();
- 	int fd = open("/dev/mpu6050", O_RDONLY);
+	int8_t buf;
+	uint8_t regval = 0;
+
+	int fd = open("/dev/mpu6050", O_RDONLY);
  	printf("fd is %d\n", fd);
+
+	read(fd, &buf, 1);
+	regval = (uint8_t)buf;
+	printf("register's value is %d\n", regval);
+
  	return 0;
  }
 #endif /* CONFIG_I2C && CONFIG_MPU6050 */
