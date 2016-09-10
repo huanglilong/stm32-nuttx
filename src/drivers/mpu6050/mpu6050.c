@@ -59,6 +59,9 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/i2c/i2c_master.h>
+
+#include "chip.h"
+#include "stm32f429i-disco.h"
 #include "mpu6050.h"
 
 #if defined(CONFIG_I2C) && defined(CONFIG_MPU6050)
@@ -453,7 +456,7 @@ static void 	mpu6050_set_i2c_master_mode_enabled(FAR struct mpu6050_dev_s *priv,
 static void 	mpu6050_set_i2c_bypass_enabled(FAR struct mpu6050_dev_s *priv, uint8_t enabled);
 static void 	mpu6050_initialize(FAR struct mpu6050_dev_s *priv);
 static uint8_t 	mpu6050_is_rdy(void);
-static void 	mpu6050_get_motion(void);
+static void 	mpu6050_get_motion(FAR struct mpu6050_dev_s *priv);
 static void 	mpu6050_init_gyro_Offset(void);
 static void 	mpu6050_interrupt_config(FAR struct mpu6050_dev_s *priv);
 static void     mpu6050_write_bits(FAR struct mpu6050_dev_s *priv, uint8_t regaddr, uint8_t bit_start, uint8_t len, uint8_t data);
@@ -719,7 +722,9 @@ static void mpu6050_interrupt_config(FAR struct mpu6050_dev_s *priv)
 
 static void mpu6050_initialize(FAR struct mpu6050_dev_s *priv)
 {
-     mpu6050_set_clock_source(priv, MPU6050_CLOCK_PLL_XGYRO);
+     /* mpu6050 interrupt digital input */
+	 stm32_configgpio(GPIO_MPU6050_INT);
+	 mpu6050_set_clock_source(priv, MPU6050_CLOCK_PLL_XGYRO);
      mpu6050_set_full_scale_gyro_range(priv, MPU6050_GYRO_FS_1000);          // +- 1000dps
      mpu6050_set_full_scale_accel_range(priv, MPU6050_ACCEL_FS_2);	          // +/- 2g
      mpu6050_set_sleep_enabled(priv ,0);
@@ -729,12 +734,53 @@ static void mpu6050_initialize(FAR struct mpu6050_dev_s *priv)
 
 static uint8_t mpu6050_is_rdy(void)
 {
-    return 0;
+	if(stm32_gpioread(GPIO_MPU6050_INT) == 1)
+	{
+		return 1;		//mpu6050 data is ready
+	}
+	else
+	{
+		return 0;
+	}
 }
 
-static void mpu6050_get_motion(void) 
+static void mpu6050_get_motion(FAR struct mpu6050_dev_s *priv)
 {
+	uint8_t buffer[12];
 
+	/* get accelerometer value */
+	buffer[0] = mpu6050_getreg8(priv, MPU6050_RA_ACCEL_XOUT_H);
+	buffer[1] = mpu6050_getreg8(priv, MPU6050_RA_ACCEL_XOUT_L);
+	buffer[2] = mpu6050_getreg8(priv, MPU6050_RA_ACCEL_YOUT_H);
+	buffer[3] = mpu6050_getreg8(priv, MPU6050_RA_ACCEL_YOUT_L);
+	buffer[4] = mpu6050_getreg8(priv, MPU6050_RA_ACCEL_ZOUT_H);
+	buffer[5] = mpu6050_getreg8(priv, MPU6050_RA_ACCEL_ZOUT_L);
+
+	/* get gyroscope value */
+	buffer[6]  = mpu6050_getreg8(priv, MPU6050_RA_GYRO_XOUT_H);
+	buffer[7]  = mpu6050_getreg8(priv, MPU6050_RA_GYRO_XOUT_L);
+	buffer[8]  = mpu6050_getreg8(priv, MPU6050_RA_GYRO_YOUT_H);
+	buffer[9]  = mpu6050_getreg8(priv, MPU6050_RA_GYRO_YOUT_L);
+	buffer[10] = mpu6050_getreg8(priv, MPU6050_RA_GYRO_ZOUT_H);
+	buffer[11] = mpu6050_getreg8(priv, MPU6050_RA_GYRO_ZOUT_L);
+
+	/* calculate acc and gyro's value */
+	priv->acc_x=(((int16_t)buffer[0]) << 8) | buffer[1];
+	priv->acc_y=(((int16_t)buffer[2]) << 8) | buffer[3];
+	priv->acc_z=(((int16_t)buffer[4]) << 8) | buffer[5];
+	priv->gy_x =(((int16_t)buffer[6]) << 8) | buffer[7];
+	priv->gy_y =(((int16_t)buffer[8]) << 8) | buffer[9];
+	priv->gy_z =(((int16_t)buffer[10]) << 8)| buffer[11];
+
+	/* acc range is +/- 2g */
+	priv->acc_x = (int16_t)(400.0f * priv->acc_x / 65535);
+	priv->acc_y = (int16_t)(400.0f * priv->acc_y / 65535);
+	priv->acc_z = (int16_t)(400.0f * priv->acc_z / 65535);
+
+	/* gyro range is +/- 1000dps */
+	priv->gy_x = (int16_t)(2000.0f * priv->gy_x / 65535);
+	priv->gy_y = (int16_t)(2000.0f * priv->gy_y / 65535);
+	priv->gy_z = (int16_t)(2000.0f * priv->gy_z / 65535);
 }
 
 static void mpu6050_init_gyro_Offset(void)
@@ -757,6 +803,7 @@ static int mpu6050_open (FAR struct file *filep)
 
 	if(mpu6050_get_device_id(priv) == MPU6050_DEFAULT_ADDRESS)
 	{
+		stm32_configgpio(GPIO_MPU6050_INT);
 		mpu6050_initialize(priv);  // init mpu6050
 		return OK; // ok
 	}
@@ -786,10 +833,20 @@ static ssize_t mpu6050_read (FAR struct file *filep, FAR char *buffer, size_t bu
 	FAR struct inode			*inode = filep->f_inode;
 	FAR struct mpu6050_dev_s 	*priv  = inode->i_private;
 
-	uint8_t regval =0;
-	regval = mpu6050_get_device_id(priv);
-	*buffer = (int8_t)regval;
-	return 6;
+	if(mpu6050_is_rdy())	// if data is ready
+	{
+		mpu6050_get_motion(priv);
+
+		int16_t *buf = (int16_t *)buffer;
+		buf[0] = priv->acc_x;
+		buf[1] = priv->acc_y;
+		buf[2] = priv->acc_z;
+		buf[3] = priv->gy_x;
+		buf[4] = priv->gy_y;
+		buf[5] = priv->gy_z;
+		return 6;
+	}
+	return 0;
 }
 
 /****************************************************************************
@@ -852,16 +909,20 @@ static ssize_t mpu6050_write(FAR struct file *filep, FAR const char *buffer, siz
  int mpu6050_main(int argc, char *argv[]);
  int mpu6050_main(int argc, char *argv[])
  {
-	int8_t buf;
-	uint8_t regval = 0;
+	int16_t buf[6];
 
 	int fd = open("/dev/mpu6050", O_RDONLY);
- 	printf("fd is %d\n", fd);
-
-	read(fd, &buf, 1);
-	regval = (uint8_t)buf;
-	printf("register's value is %d\n", regval);
-
- 	return 0;
+	//printf("fd is %d\n", fd);
+	while(1)
+	{
+		int ret = read(fd, (char *)&buf, sizeof(buf));
+		if(ret == 6)
+		{
+			/* printf can't work with float, i don't kown why */
+			printf("acc_x: %4d acc_y: %4d acc_z: %4d \n", buf[0], buf[1], buf[2]);
+		}
+		sleep(1);
+	}
+	return 0;
  }
 #endif /* CONFIG_I2C && CONFIG_MPU6050 */
