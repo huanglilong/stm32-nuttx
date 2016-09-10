@@ -1,0 +1,1 @@
+SRCS = mpu6050_main.c

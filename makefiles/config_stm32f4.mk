@@ -10,8 +10,8 @@ MODULES += platform
 
 # user applications
 MODULES += modules/buttons
-
 MODULES += modules/hello
+MODULES += modules/mpu6050
 
 # drivers
 MODULES += drivers/led

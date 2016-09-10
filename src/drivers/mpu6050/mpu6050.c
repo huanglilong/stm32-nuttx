@@ -904,25 +904,4 @@ static ssize_t mpu6050_write(FAR struct file *filep, FAR const char *buffer, siz
 	 sninfo("MPU6050 driver loaded successfully!\n");
 	 return ret;
  }
-
- /* for debug */
- int mpu6050_main(int argc, char *argv[]);
- int mpu6050_main(int argc, char *argv[])
- {
-	int16_t buf[6];
-
-	int fd = open("/dev/mpu6050", O_RDONLY);
-	//printf("fd is %d\n", fd);
-	while(1)
-	{
-		int ret = read(fd, (char *)&buf, sizeof(buf));
-		if(ret == 6)
-		{
-			/* printf can't work with float, i don't kown why */
-			printf("ax:%4d ay:%4d az:%4d gx:%4d gy:%4d gz:%4d \n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
-		}
-		sleep(2);
-	}
-	return 0;
- }
 #endif /* CONFIG_I2C && CONFIG_MPU6050 */
