@@ -919,9 +919,9 @@ static ssize_t mpu6050_write(FAR struct file *filep, FAR const char *buffer, siz
 		if(ret == 6)
 		{
 			/* printf can't work with float, i don't kown why */
-			printf("acc_x: %4d acc_y: %4d acc_z: %4d \n", buf[0], buf[1], buf[2]);
+			printf("ax:%4d ay:%4d az:%4d gx:%4d gy:%4d gz:%4d \n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
 		}
-		sleep(1);
+		sleep(2);
 	}
 	return 0;
  }
