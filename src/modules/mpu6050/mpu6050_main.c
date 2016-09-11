@@ -25,7 +25,7 @@
 int mpu6050_main(int argc, char *argv[]);
 int mpu6050_main(int argc, char *argv[])
 {
-    int16_t buf[6];
+    float buf[6];
 
     /* open mpu6050 device */
     int fd = open("/dev/mpu6050", O_RDONLY);
@@ -37,14 +37,14 @@ int mpu6050_main(int argc, char *argv[])
     /* poll, wait for data ready */
     while(1)
     {
-        int ret = read(fd, (char *)&buf, sizeof(buf));
+        int ret = read(fd, (char *)&buf, sizeof(buf)/sizeof(buf[0]));
         if(ret == 6)
         {
             /* printf can't work with float, i don't kown why */
-            printf("ax:%4d ay:%4d az:%4d gx:%4d gy:%4d gz:%4d \n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
-            printf("test float print %8.4f\n", 3.2);
+            printf("ax:%8.4f\tay:%8.4f\taz:%8.4f\tgx:%8.4f\tgy:%8.4f\tgz:%8.4f\t\n", 
+                   (double)buf[0], (double)buf[1], (double)buf[2], (double)buf[3], (double)buf[4], (double)buf[5]);
         }
-        sleep(2);
+        sleep(1);
     }
     return 0;
 }

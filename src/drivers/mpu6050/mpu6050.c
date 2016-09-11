@@ -429,15 +429,19 @@ struct mpu6050_dev_s
 	FAR struct i2c_master_s *i2c;
 	uint8_t addr;                 	/* MPU6050 I2C address */
 	int freq;                     	/* MPU6050 Frequency <= 4KHz */
-	int16_t acc_x;				  	/* accelerometer x axis */
-	int16_t acc_y;				  	/* accelerometer y axis */
-	int16_t acc_z;				  	/* accelerometer z axis */
-	int16_t gy_x;				 	/* gyroscope x axis */
-	int16_t gy_y;				 	/* gyroscope y axis */
-	int16_t gy_z;				 	/* gyroscope z axis */
-	int16_t gy_x_offset;			/* gyroscope x offset */
-	int16_t gy_y_offset;			/* gyroscope y offset */
-	int16_t gy_z_offset;			/* gyroscope z offset */
+	float acc_x;				  	/* accelerometer x axis */
+	float acc_y;				  	/* accelerometer y axis */
+	float acc_z;				  	/* accelerometer z axis */
+	// float acc_x_offset;				/* accelerometer x axis */
+	// float acc_y_offset;				/* accelerometer y axis */
+	// float acc_z_offset;				/* accelerometer z axis */
+
+	float gy_x;				 		/* gyroscope x axis */
+	float gy_y;				 		/* gyroscope y axis */
+	float gy_z;				 		/* gyroscope z axis */
+	// float gy_x_offset;				/* gyroscope x offset */
+	// float gy_y_offset;				/* gyroscope y offset */
+	// float gy_z_offset;				/* gyroscope z offset */
 };
 
 /****************************************************************************
@@ -747,6 +751,7 @@ static uint8_t mpu6050_is_rdy(void)
 static void mpu6050_get_motion(FAR struct mpu6050_dev_s *priv)
 {
 	uint8_t buffer[12];
+	int16_t temp[6];
 
 	/* get accelerometer value */
 	buffer[0] = mpu6050_getreg8(priv, MPU6050_RA_ACCEL_XOUT_H);
@@ -765,22 +770,22 @@ static void mpu6050_get_motion(FAR struct mpu6050_dev_s *priv)
 	buffer[11] = mpu6050_getreg8(priv, MPU6050_RA_GYRO_ZOUT_L);
 
 	/* calculate acc and gyro's value */
-	priv->acc_x=(((int16_t)buffer[0]) << 8) | buffer[1];
-	priv->acc_y=(((int16_t)buffer[2]) << 8) | buffer[3];
-	priv->acc_z=(((int16_t)buffer[4]) << 8) | buffer[5];
-	priv->gy_x =(((int16_t)buffer[6]) << 8) | buffer[7];
-	priv->gy_y =(((int16_t)buffer[8]) << 8) | buffer[9];
-	priv->gy_z =(((int16_t)buffer[10]) << 8)| buffer[11];
+	temp[0] = (((int16_t)buffer[0]) << 8) | buffer[1];
+	temp[1] = (((int16_t)buffer[2]) << 8) | buffer[3];
+	temp[2] = (((int16_t)buffer[4]) << 8) | buffer[5];
+	temp[3] = (((int16_t)buffer[6]) << 8) | buffer[7];
+	temp[4] = (((int16_t)buffer[8]) << 8) | buffer[9];
+	temp[5] = (((int16_t)buffer[10]) << 8)| buffer[11];
 
 	/* acc range is +/- 2g */
-	priv->acc_x = (int16_t)(400.0f * priv->acc_x / 65535);
-	priv->acc_y = (int16_t)(400.0f * priv->acc_y / 65535);
-	priv->acc_z = (int16_t)(400.0f * priv->acc_z / 65535);
+	priv->acc_x = 4.0f * temp[0] / 65535;
+	priv->acc_y = 4.0f * temp[1] / 65535;
+	priv->acc_z = 4.0f * temp[2] / 65535;
 
 	/* gyro range is +/- 1000dps */
-	priv->gy_x = (int16_t)(2000.0f * priv->gy_x / 65535);
-	priv->gy_y = (int16_t)(2000.0f * priv->gy_y / 65535);
-	priv->gy_z = (int16_t)(2000.0f * priv->gy_z / 65535);
+	priv->gy_x = 2000.0f * temp[3] / 65535;
+	priv->gy_y = 2000.0f * temp[4] / 65535;
+	priv->gy_z = 2000.0f * temp[5] / 65535;
 }
 
 static void mpu6050_init_gyro_Offset(void)
@@ -837,14 +842,17 @@ static ssize_t mpu6050_read (FAR struct file *filep, FAR char *buffer, size_t bu
 	{
 		mpu6050_get_motion(priv);
 
-		int16_t *buf = (int16_t *)buffer;
-		buf[0] = priv->acc_x;
-		buf[1] = priv->acc_y;
-		buf[2] = priv->acc_z;
-		buf[3] = priv->gy_x;
-		buf[4] = priv->gy_y;
-		buf[5] = priv->gy_z;
-		return 6;
+		if(buflen == 6)
+		{
+			float *buf = (float *)buffer;
+			buf[0] = priv->acc_x;
+			buf[1] = priv->acc_y;
+			buf[2] = priv->acc_z;
+			buf[3] = priv->gy_x;
+			buf[4] = priv->gy_y;
+			buf[5] = priv->gy_z;
+			return 6;
+		}		
 	}
 	return 0;
 }
