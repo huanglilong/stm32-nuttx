@@ -42,6 +42,7 @@ int mpu6050_main(int argc, char *argv[])
         {
             /* printf can't work with float, i don't kown why */
             printf("ax:%4d ay:%4d az:%4d gx:%4d gy:%4d gz:%4d \n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
+            printf("test float print %8.4f\n", 3.2);
         }
         sleep(2);
     }
