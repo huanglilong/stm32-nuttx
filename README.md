@@ -15,6 +15,7 @@ $ cd stm32-nuttx
 
 $ git submodule update --init
 
+# Configure and build nuttx
 $ make archive
 
 # Building firmware
