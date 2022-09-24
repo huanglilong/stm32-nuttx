@@ -93,7 +93,6 @@ ARCHWARNINGS    = 	-Wall \
 					-Werror=unused-but-set-variable \
 					-Werror=unused-variable \
 					-Werror=double-promotion \
-					-Werror=reorder \
 					-Werror=uninitialized \
 					-Werror=init-self
 #   -Werror=float-conversion - works, just needs to be phased in with some effort and needs GCC 4.9+
@@ -113,7 +112,8 @@ ARCHCWARNINGS	= 	$(ARCHWARNINGS) \
 # C++-specific warnings
 #
 ARCHWARNINGSXX	= $(ARCHWARNINGS) \
-			   	  -Wno-missing-field-initializers
+						-Wno-missing-field-initializers \
+						-Werror=reorder
 
 # pull in *just* libm from the toolchain ... this is grody
 LIBM			:= $(shell $(CC) $(FLAGS_CORTEXM4F) -print-file-name=libm.a)
@@ -216,7 +216,7 @@ endef
 define LINK
 	@echo "LINK:    $1"
 	@mkdir -p $(dir $1)
-	$(Q) $(LD) $(LDFLAGS) -Map $1.map -o $1 --start-group $2 $(LIBS) $(EXTRA_LIBS) $(LIBGCC) --end-group
+	$(Q) $(LD) $(LDFLAGS) -Map $1.map --print-memory-usage -o $1 --start-group $2 $(LIBS) $(EXTRA_LIBS) $(LIBGCC) --end-group
 endef
 
 # Convert $1 from a linked object to a raw binary in $2
